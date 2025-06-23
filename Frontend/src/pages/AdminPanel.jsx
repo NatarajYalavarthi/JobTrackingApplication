@@ -22,32 +22,35 @@ function AdminPanel() {
   const [loadingStatusId, setLoadingStatusId] = useState(null);
   const [loadingFeedbackId, setLoadingFeedbackId] = useState(null);
   const [companySearch, setCompanySearch] = useState('');
+  const [initialLoading, setInitialLoading] = useState(true); // NEW
+
 
   const role = localStorage.getItem('userRole');
   const isAdmin = role === 'admin';
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
+const fetchApplications = async (isInitial = false) => {
+  try {
+    if (isInitial) setInitialLoading(true); // Only show loader on initial load
+    const { data } = await axios.get('/applications/getApplications', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    setApplications(data);
+    const fb = {};
+    data.forEach((app) => {
+      fb[app.id] = app.feedback || '';
+    });
+    setFeedbacks(fb);
+  } catch (err) {
+    console.error('Error fetching applications:', err);
+  } finally {
+    if (isInitial) setInitialLoading(false);
+  }
+};
 
-  const fetchApplications = async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get('/applications/getApplications', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      setApplications(data);
-      const fb = {};
-      data.forEach((app) => {
-        fb[app.id] = app.feedback || '';
-      });
-      setFeedbacks(fb);
-    } catch (err) {
-      console.error('Error fetching applications:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+useEffect(() => {
+  fetchApplications(true);
+}, []);
+
 
   const handleFeedbackChange = (id, value) => {
     setFeedbacks(prev => ({ ...prev, [id]: value }));
@@ -108,7 +111,7 @@ const filteredApps = applications
 
 
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="60vh">
         <CircularProgress size={40} />
